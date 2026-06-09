@@ -5,6 +5,7 @@ import api from '../../services/api.js';
 
 const TABS = [
   { id: 'report', label: 'Absence Report' },
+  { id: 'payment', label: 'Payment Late' },
   { id: 'send', label: 'Send Report' },
   { id: 'logs', label: 'Message Logs' }
 ];
@@ -46,6 +47,8 @@ export default function Notifications() {
   const { isSending: sending, cooldownRemaining, startSendDelay, isCooldownActive } = useSendCooldown(10);
   const [showConfirm, setShowConfirm] = useState(false);
   const [sendResults, setSendResults] = useState(null);
+  const [paymentReport, setPaymentReport] = useState([]);
+  const [paymentMonth, setPaymentMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [logs, setLogs] = useState([]);
   const [logFilters, setLogFilters] = useState({ studentId: '', month: '', trigger: '', status: '' });
   const [logPage, setLogPage] = useState(1);
@@ -101,6 +104,22 @@ export default function Notifications() {
     }
   }, []);
 
+  const fetchPaymentReport = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.append('month', paymentMonth);
+      if (gradeFilter) params.append('grade', gradeFilter);
+      if (groupId) params.append('groupId', groupId);
+      const res = await api.get(`/notifications/payment-late-report?${params.toString()}`);
+      setPaymentReport(res.data.data || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [paymentMonth, gradeFilter, groupId]);
+
   const fetchRules = useCallback(async () => {
     setRulesLoading(true);
     try {
@@ -113,7 +132,9 @@ export default function Notifications() {
       setTemplates({
         per_session: byTrigger.per_session || `السلام عليكم ورحمة الله،\nنود إعلامكم بأن ابنكم/ابنتكم {{studentName}} من {{grade}} لم يحضر حصة اليوم {{date}}.\nيرجى التواصل مع الأستاذ {{teacherName}} لمعرفة التفاصيل.\nشكراً لتعاونكم 🙏`,
         weekly: byTrigger.weekly || `السلام عليكم ورحمة الله،\nتقرير الحضور الأسبوعي لابنكم/ابنتكم {{studentName}} من {{grade}}:\nعدد الغيابات هذا الأسبوع: {{absenceCount}} من أصل {{totalSessions}} حصص.\nللاستفسار تواصلوا مع الأستاذ {{teacherName}}.\nشكراً 🙏`,
-        monthly: byTrigger.monthly || `السلام عليكم ورحمة الله،\nتقرير الحضور الشهري لابنكم/ابنتكم {{studentName}} من {{grade}}:\nإجمالي الغيابات هذا الشهر: {{absenceCount}} من أصل {{totalSessions}} حصص.\nيرجى الاهتمام بانتظام الحضور للحفاظ على مستوى الطالب.\nمع تحيات الأستاذ {{teacherName}} 🎓`
+        monthly: byTrigger.monthly || `السلام عليكم ورحمة الله،\nتقرير الحضور الشهري لابنكم/ابنتكم {{studentName}} من {{grade}}:\nإجمالي الغيابات هذا الشهر: {{absenceCount}} من أصل {{totalSessions}} حصص.\nيرجى الاهتمام بانتظام الحضور للحفاظ على مستوى الطالب.\nمع تحيات الأستاذ {{teacherName}} 🎓`,
+        exam_result: byTrigger.exam_result || `السلام عليكم ورحمة الله،\nنود إعلامكم بنتيجة امتحان {{examTitle}} لابنكم/ابنتكم {{studentName}} من {{grade}}.\nالدرجة: {{score}} من {{total}} ({{percentage}}%).\nمع تحيات الأستاذ {{teacherName}} 🎓`,
+        payment_late: byTrigger.payment_late || `السلام عليكم ورحمة الله،\nنود تذكيركم بأن اشتراك ابنكم/ابنتكم {{studentName}} من {{grade}} عن شهر {{month}} لم يتم سداده بعد.\nالمبلغ المستحق: {{amount}} جنيه.\nيرجى السداد في أقرب وقت ممكن.\nمع تحيات الأستاذ {{teacherName}} 🎓`
       });
     } catch (e) {
       console.error(e);
@@ -129,10 +150,11 @@ export default function Notifications() {
 
   useEffect(() => {
     if (tab === 'report') fetchReport();
+    else if (tab === 'payment') fetchPaymentReport();
     else if (tab === 'logs') fetchLogs();
     else fetchRules();
     fetchStats();
-  }, [tab, fetchReport, fetchLogs, fetchRules, fetchStats]);
+  }, [tab, fetchReport, fetchPaymentReport, fetchLogs, fetchRules, fetchStats]);
 
   const toggleSelect = (id) => {
     const next = new Set(selectedIds);
@@ -180,14 +202,25 @@ export default function Notifications() {
     }
   };
 
-  const handleBulkSend = async (trigger) => {
-    const body = trigger === 'weekly'
-      ? { week: inputValue, grade: gradeFilter || 'all' }
-      : { month: inputValue, grade: gradeFilter || 'all' };
+  const handleBulkSend = async (trigger, selectedStudentIds = null) => {
+    let body;
+    if (trigger === 'weekly') {
+      body = { week: inputValue, grade: gradeFilter || 'all' };
+    } else if (trigger === 'payment_late') {
+      body = { month: paymentMonth, grade: gradeFilter || 'all' };
+      if (selectedStudentIds && selectedStudentIds.length > 0) {
+        body.studentIds = selectedStudentIds;
+      }
+    } else {
+      body = { month: inputValue, grade: gradeFilter || 'all' };
+    }
     await startSendDelay(async () => {
       const res = await api.post(`/notifications/send-${trigger}`, body);
-      addToast(`Sent: ${res.data.data.sent}, Failed: ${res.data.data.failed}`, 'success');
+      const sent = res.data.data.sent ?? res.data.data.results?.filter(r => r.status === 'sent').length;
+      const failed = res.data.data.failed ?? res.data.data.results?.filter(r => r.status === 'failed').length;
+      addToast(`Sent: ${sent}, Failed: ${failed}`, 'success');
       fetchStats();
+      if (tab === 'payment') fetchPaymentReport();
     });
   };
 
@@ -219,6 +252,8 @@ export default function Notifications() {
         <StatCard label="Per Session" value={stats.byTrigger?.per_session || 0} color="#3b82f6" />
         <StatCard label="Weekly" value={stats.byTrigger?.weekly || 0} color="#8b5cf6" />
         <StatCard label="Monthly" value={stats.byTrigger?.monthly || 0} color="#06b6d4" />
+        <StatCard label="Exam Result" value={stats.byTrigger?.exam_result || 0} color="#f97316" />
+        <StatCard label="Payment Late" value={stats.byTrigger?.payment_late || 0} color="#db2777" />
       </div>
 
       {/* Tabs */}
@@ -378,13 +413,138 @@ export default function Notifications() {
         </>
       )}
 
-      {/* TAB 2: Send Report (Rules) */}
+      {/* TAB 2: Payment Late Report */}
+      {tab === 'payment' && (
+        <>
+          <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
+            <div className="form-row" style={{ gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div className="form-group" style={{ marginBottom: 0, minWidth: 180 }}>
+                <label>Month</label>
+                <input type="month" value={paymentMonth} onChange={e => setPaymentMonth(e.target.value)} />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0, minWidth: 140 }}>
+                <label>Grade</label>
+                <select value={gradeFilter} onChange={e => { setGradeFilter(e.target.value); setGroupId(''); }}>
+                  <option value="">All</option>
+                  {gradesList.map(g => <option key={g._id} value={g.name}>{g.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0, minWidth: 180 }}>
+                <label>Group</label>
+                <select value={groupId} onChange={e => setGroupId(e.target.value)}>
+                  <option value="">All Groups</option>
+                  {groups.filter(g => {
+                    if (!gradeFilter) return true;
+                    const groupGrade = String(g.grade || '').replace(/^Grade\s*/, '');
+                    const selectedGrade = String(gradeFilter || '').replace(/^Grade\s*/, '');
+                    return groupGrade === selectedGrade;
+                  }).map(g => <option key={g._id} value={g._id}>{g.name}</option>)}
+                </select>
+              </div>
+              <button className="btn" onClick={fetchPaymentReport} disabled={loading} style={{ marginBottom: 0 }}>
+                {loading ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+          </div>
+
+          {selectedIds.size > 0 && (
+            <div className="card" style={{ padding: '0.875rem 1.25rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#eff6ff' }}>
+              <span style={{ fontWeight: 600, color: 'var(--primary)' }}>☑ {selectedIds.size} students selected</span>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="btn" style={{ background: '#25D366', borderColor: '#25D366', minWidth: 220 }} onClick={() => { handleBulkSend('payment_late', Array.from(selectedIds)); setSelectedIds(new Set()); }} disabled={isCooldownActive}>
+                  {isCooldownActive ? `⏳ Wait ${cooldownRemaining}s` : '📱 Send WhatsApp to Selected'}
+                </button>
+                <button className="btn btn-ghost" onClick={clearSelection}>Clear Selection</button>
+              </div>
+            </div>
+          )}
+
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
+                Unpaid Students <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 400 }}>({paymentReport.length})</span>
+              </h3>
+              <button className="btn btn-ghost" style={{ fontSize: '0.8rem' }} onClick={() => {
+                const all = paymentReport.filter(r => r.student.parentPhone).map(r => r.student._id);
+                setSelectedIds(new Set(all));
+              }}>Select All</button>
+            </div>
+            {loading ? (
+              <div style={{ padding: '3rem', textAlign: 'center' }}><div style={{ display: 'inline-block', width: 40, height: 40, border: '4px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /></div>
+            ) : paymentReport.length === 0 ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💰</div>
+                <p>No unpaid students found for this month.</p>
+              </div>
+            ) : (
+              <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 40 }}><input type="checkbox" checked={selectedIds.size > 0 && selectedIds.size === paymentReport.filter(r => r.student.parentPhone).length} onChange={e => { const all = paymentReport.filter(r => r.student.parentPhone).map(r => r.student._id); e.target.checked ? setSelectedIds(new Set(all)) : setSelectedIds(new Set()); }} /></th>
+                      <th>Student</th>
+                      <th>Grade</th>
+                      <th>Group</th>
+                      <th>Parent Phone</th>
+                      <th>Amount Due</th>
+                      <th>Notified</th>
+                      <th style={{ width: 140 }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paymentReport.map(r => {
+                      const sid = r.student._id;
+                      const hasPhone = !!r.student.parentPhone;
+                      return (
+                        <tr key={sid}>
+                          <td><input type="checkbox" checked={selectedIds.has(sid)} onChange={() => toggleSelect(sid)} disabled={!hasPhone} /></td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#fce7f3', color: '#db2777', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.75rem' }}>
+                                {r.student.fullName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                              </div>
+                              <strong>{r.student.fullName}</strong>
+                            </div>
+                          </td>
+                          <td><span className="badge badge-neutral">Grade {r.student.grade}</span></td>
+                          <td><span className="badge badge-neutral">{r.student.groupId?.name || '—'}</span></td>
+                          <td>
+                            {hasPhone ? (
+                              <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{r.student.parentPhone}</span>
+                            ) : (
+                              <span style={{ color: '#f59e0b', fontSize: '0.8rem' }} title="No parent phone on file">⚠️ Missing</span>
+                            )}
+                          </td>
+                          <td><span className="badge badge-danger">{r.amount} EGP</span></td>
+                          <td>{r.alreadyNotified ? <span style={{ color: '#10b981', fontSize: '1.2rem' }}>✅</span> : <span style={{ color: '#9ca3af' }}>—</span>}</td>
+                          <td>
+                            <button
+                              className="btn"
+                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', background: '#25D366', borderColor: '#25D366', color: '#fff', minWidth: 90 }}
+                              onClick={() => { handleBulkSend('payment_late', [sid]); }}
+                              disabled={!hasPhone || isCooldownActive}
+                            >
+                              {isCooldownActive ? `⏳ ${cooldownRemaining}s` : '📱 Send'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* TAB 3: Send Report (Rules) */}
       {tab === 'send' && (
         <div className="stats-row" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-          {['per_session', 'weekly', 'monthly'].map(trigger => {
+          {['per_session', 'weekly', 'monthly', 'exam_result', 'payment_late'].map(trigger => {
             const rule = rules.find(r => r.trigger === trigger);
             const isActive = rule?.isActive || false;
-            const titles = { per_session: '📅 Per Session Alerts', weekly: '📆 Weekly Summary', monthly: '🗓️ Monthly Summary' };
+            const titles = { per_session: '📅 Per Session Alerts', weekly: '📆 Weekly Summary', monthly: '🗓️ Monthly Summary', exam_result: '📝 Exam Result Alerts', payment_late: '💰 Payment Late Alerts' };
             return (
               <div className="card" key={trigger} style={{ padding: '1.5rem' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem' }}>{titles[trigger]}</h3>
@@ -410,7 +570,7 @@ export default function Notifications() {
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
                   <button className="btn" onClick={() => handleSaveRule(trigger)}>Save Settings</button>
-                    {trigger !== 'per_session' && (
+                    {trigger !== 'per_session' && trigger !== 'exam_result' && (
                     <button className="btn btn-ghost" onClick={() => handleBulkSend(trigger)} disabled={isCooldownActive}>
                       {isCooldownActive ? `⏳ Wait ${cooldownRemaining}s` : 'Send Now'}
                     </button>
@@ -439,6 +599,8 @@ export default function Notifications() {
                   <option value="per_session">Per Session</option>
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
+                  <option value="exam_result">Exam Result</option>
+                  <option value="payment_late">Payment Late</option>
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: 0, minWidth: 140 }}>

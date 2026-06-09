@@ -2,15 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import Badge from '../../components/ui/Badge.jsx';
+import { useToast } from '../../components/ui/Toast.jsx';
+import { useSendCooldown } from '../../hooks/useSendCooldown.js';
 import api from '../../services/api.js';
 
 export default function ExamResults() {
   const { examId } = useParams();
   const navigate = useNavigate();
+  const { addToast } = useToast();
+  const { isSending: sendingWa, cooldownRemaining, startSendDelay, isCooldownActive } = useSendCooldown(10);
   const [exam, setExam] = useState(null);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [sendResults, setSendResults] = useState(null);
+  const [selectedResultIds, setSelectedResultIds] = useState(new Set());
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,6 +87,29 @@ export default function ExamResults() {
     a.click();
   };
 
+  const toggleSelectResult = (id) => {
+    const next = new Set(selectedResultIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedResultIds(next);
+  };
+
+  const selectAllResults = () => {
+    const all = results.filter(r => r.studentId).map(r => r._id);
+    setSelectedResultIds(new Set(all));
+  };
+
+  const clearSelection = () => setSelectedResultIds(new Set());
+
+  const handleSendExamResult = async (resultIds) => {
+    await startSendDelay(async () => {
+      const res = await api.post('/notifications/send-exam-result', { examId, resultIds });
+      setSendResults(res.data.data.results);
+      setSelectedResultIds(new Set());
+      addToast(`Sent ${res.data.data.results.filter(r => r.status === 'sent').length} exam result messages`, 'success');
+    });
+  };
+
   const StatCard = ({ label, value, color, icon }) => (
     <div className="card stat-card" style={{ borderLeftColor: color, padding: '1.25rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -103,6 +132,14 @@ export default function ExamResults() {
         <div className="row-actions">
           <button className="btn btn-ghost" onClick={() => navigate('/teacher/exams')}>← Back to Exams</button>
           <button className="btn" onClick={exportCSV}>📥 Export CSV</button>
+          <button
+            className="btn"
+            style={{ background: '#25D366', borderColor: '#25D366', color: '#fff' }}
+            onClick={() => selectAllResults()}
+            disabled={results.length === 0}
+          >
+            📱 Select All for WhatsApp
+          </button>
         </div>
       </div>
 
@@ -155,6 +192,18 @@ export default function ExamResults() {
         </div>
       )}
 
+      {selectedResultIds.size > 0 && (
+        <div className="card" style={{ padding: '0.875rem 1.25rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#eff6ff' }}>
+          <span style={{ fontWeight: 600, color: 'var(--primary)' }}>☑ {selectedResultIds.size} results selected</span>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn" style={{ background: '#25D366', borderColor: '#25D366', minWidth: 220 }} onClick={() => handleSendExamResult(Array.from(selectedResultIds))} disabled={isCooldownActive}>
+              {isCooldownActive ? `⏳ Wait ${cooldownRemaining}s` : '📱 Send WhatsApp to Selected'}
+            </button>
+            <button className="btn btn-ghost" onClick={clearSelection}>Clear Selection</button>
+          </div>
+        </div>
+      )}
+
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>Student Results</h3>
@@ -169,6 +218,7 @@ export default function ExamResults() {
           <table>
             <thead>
               <tr>
+                <th style={{ width: 40 }}><input type="checkbox" checked={selectedResultIds.size > 0 && selectedResultIds.size === results.filter(r => r.studentId).length} onChange={e => e.target.checked ? selectAllResults() : clearSelection()} /></th>
                 <th style={{ width: 50 }}>#</th>
                 <th>Student</th>
                 <th>Score</th>
@@ -176,14 +226,16 @@ export default function ExamResults() {
                 <th>Submitted</th>
                 <th>Status</th>
                 <th>Flags</th>
+                <th style={{ width: 100 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredResults.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>No results found</td></tr>
+                <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>No results found</td></tr>
               ) : (
                 filteredResults.map((r, idx) => (
                   <tr key={r._id}>
+                    <td><input type="checkbox" checked={selectedResultIds.has(r._id)} onChange={() => toggleSelectResult(r._id)} disabled={!r.studentId} /></td>
                     <td style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{idx + 1}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -246,6 +298,17 @@ export default function ExamResults() {
                         </div>
                       )}
                     </td>
+                    <td>
+                      <button
+                        className="btn btn-ghost"
+                        style={{ padding: '0.35rem', fontSize: '0.8rem', color: '#25D366', minWidth: 40 }}
+                        onClick={() => handleSendExamResult([r._id])}
+                        disabled={!r.studentId || isCooldownActive}
+                        title="Send WhatsApp to parent"
+                      >
+                        {isCooldownActive ? `⏳${cooldownRemaining}` : '📱'}
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -253,6 +316,29 @@ export default function ExamResults() {
           </table>
         </div>
       </div>
+
+      {/* Send Results Modal */}
+      {sendResults && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="card" style={{ maxWidth: 600, width: '100%', maxHeight: '80vh', overflow: 'auto' }}>
+            <h3 style={{ marginBottom: '1rem' }}>Send Results</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {sendResults.map((r, i) => (
+                <div key={i} style={{ padding: '0.625rem 0.875rem', borderRadius: 'var(--radius-sm)', background: r.status === 'sent' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${r.status === 'sent' ? '#bbf7d0' : '#fecaca'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{r.studentName || 'Unknown'}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{r.phone || 'No phone'}</div>
+                  </div>
+                  <span style={{ fontWeight: 700, color: r.status === 'sent' ? '#10b981' : '#ef4444' }}>{r.status === 'sent' ? '✅ Sent' : `❌ ${r.error || 'Failed'}`}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={() => setSendResults(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
