@@ -27,17 +27,18 @@ export default function Students() {
       if (gradeFilter) params.append('grade', gradeFilter);
       if (search) params.append('search', search);
       const res = await api.get(`/teacher/students?${params.toString()}`);
-      setStudents(res.data);
+      setStudents(res.data?.data || res.data || []);
 
       const payRes = await api.get(`/payments?month=${currentMonth}`);
+      const paymentsArr = payRes.data?.data || payRes.data || [];
       const map = {};
-      payRes.data.forEach(p => {
+      paymentsArr.forEach(p => {
         map[p.studentId?._id || p.studentId] = p.isPaid;
       });
       setPayments(map);
 
       const groupRes = await api.get('/groups');
-      setGroups(groupRes.data);
+      setGroups(groupRes.data?.data || groupRes.data || []);
     } catch (e) {
       console.error(e);
     }
@@ -93,13 +94,10 @@ export default function Students() {
     fetchStudents();
   };
 
-  const selectedGradeObj = gradesList.find(g => g.name === form.grade);
   const availableGroups = groups.filter(g => {
-    const groupGrade = String(g.grade?.name || g.grade || '').replace(/^Grade\s*/, '');
-    const groupGradeId = String(g.grade?._id || g.grade || '');
-    const selectedGrade = String(form.grade || '').replace(/^Grade\s*/, '');
-    const selectedGradeId = String(selectedGradeObj?._id || '');
-    return groupGrade === selectedGrade || groupGradeId === selectedGradeId;
+    const groupGrade = String(g.grade || '').trim();
+    const selectedGrade = String(form.grade || '').trim();
+    return groupGrade === selectedGrade;
   });
 
   return (

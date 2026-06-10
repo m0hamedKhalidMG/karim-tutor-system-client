@@ -165,31 +165,30 @@ export default function Dashboard() {
              </div>
            )}
          </div>
-       </div>
 
-       <div className="card">
-          <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>Unpaid Fees This Month</h3>
-          {unpaidStudents.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>All payments are up to date 🎉</p>
-          ) : (
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr><th>Name</th><th>Grade</th><th>Month</th></tr>
-                </thead>
-                <tbody>
-                  {unpaidStudents.map((s, i) => (
-                    <tr key={i}>
-                      <td><strong>{s.name}</strong></td>
-                       <td><span className="badge badge-neutral">{getGradeDisplayName(s.grade)}</span></td>
-                       <td><span className="badge badge-warning">{s.month}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+      <div className="card">
+        <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>Unpaid Fees This Month</h3>
+        {unpaidStudents.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>All payments are up to date 🎉</p>
+        ) : (
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Grade</th><th>Month</th></tr>
+              </thead>
+              <tbody>
+                {unpaidStudents.map((s, i) => (
+                  <tr key={i}>
+                    <td><strong>{s.name}</strong></td>
+                     <td><span className="badge badge-neutral">{getGradeDisplayName(s.grade)}</span></td>
+                     <td><span className="badge badge-warning">{s.month}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
       </div>
     </div>
   );
