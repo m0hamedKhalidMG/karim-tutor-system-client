@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { egyptDateString } from '../../utils/timezone.js';
+import { getGradeDisplayName } from '../../utils/gradeDisplay.js';
 import api from '../../services/api.js';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -383,7 +384,7 @@ export default function AttendanceHistory() {
                           <strong>{r.studentId?.fullName || 'Unknown'}</strong>
                         </div>
                       </td>
-                      <td><span className="badge badge-neutral">Grade {r.studentId?.grade}</span></td>
+                      <td><span className="badge badge-neutral">{getGradeDisplayName(r.studentId?.grade)}</span></td>
                       <td><StatusBadge status={r.status} /></td>
                       <td><MethodBadge via={r.markedVia} /></td>
                       <td style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
@@ -411,9 +412,9 @@ export default function AttendanceHistory() {
                           <strong>{r.student.fullName}</strong>
                         </div>
                       </td>
-                      <td><span className="badge badge-neutral">Grade {r.student.grade}</span></td>
-                      <td><span className="badge badge-neutral">{r.student.groupId?.name || 'No Group'}</span></td>
-                      <td><StatusBadge status={r.status} /></td>
+                       <td><span className="badge badge-neutral">{getGradeDisplayName(r.student.grade)}</span></td>
+                       <td><span className="badge badge-neutral">{r.student.groupId?.name || 'No Group'}</span></td>
+                       <td><StatusBadge status={r.status} /></td>
                       <td><MethodBadge via={r.markedVia} /></td>
                       <td>
                         <div className="row-actions" style={{ gap: '0.4rem' }}>
@@ -451,8 +452,8 @@ export default function AttendanceHistory() {
                           <strong>{a.student.fullName}</strong>
                         </div>
                       </td>
-                      <td><span className="badge badge-neutral">Grade {a.student.grade}</span></td>
-                      <td style={{ textAlign: 'center', fontWeight: 600 }}>{a.sessionsPerWeek}</td>
+                       <td><span className="badge badge-neutral">{getGradeDisplayName(a.student.grade)}</span></td>
+                       <td style={{ textAlign: 'center', fontWeight: 600 }}>{a.sessionsPerWeek}</td>
                       <td style={{ textAlign: 'center', fontWeight: 700 }}>{a.scheduledCount}</td>
                       <td style={{ textAlign: 'center', color: '#10b981', fontWeight: 600 }}>{a.present}</td>
                       <td style={{ textAlign: 'center', color: '#ef4444', fontWeight: 600 }}>{a.absent}</td>

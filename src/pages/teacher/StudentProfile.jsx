@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import Badge from '../../components/ui/Badge.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import { formatMonth } from '../../utils/formatMonth.js';
+import { getGradeDisplayName } from '../../utils/gradeDisplay.js';
 import api from '../../services/api.js';
 
 export default function StudentProfile() {
@@ -98,7 +99,7 @@ export default function StudentProfile() {
 
       <div className="card info-card">
         <div className="info-grid">
-          <div><strong>Grade:</strong> {student.grade}</div>
+          <div><strong>Grade:</strong> {getGradeDisplayName(student.grade)}</div>
           <div><strong>Group:</strong> {student.groupId?.name || 'Not assigned'}</div>
           <div><strong>Phone:</strong> {student.phone || '-'}</div>
           <div><strong>Parent Phone:</strong> {student.parentPhone || '-'}</div>

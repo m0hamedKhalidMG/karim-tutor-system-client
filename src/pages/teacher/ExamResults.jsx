@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import Badge from '../../components/ui/Badge.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { useSendCooldown } from '../../hooks/useSendCooldown.js';
+import { getGradeDisplayName } from '../../utils/gradeDisplay.js';
 import api from '../../services/api.js';
 
 export default function ExamResults() {
@@ -127,7 +128,7 @@ export default function ExamResults() {
       <div className="page-header">
         <div>
           <h1>Exam Results</h1>
-          <p style={{ color: 'var(--text-secondary)', margin: '0.25rem 0 0', fontSize: '0.9rem' }}>{exam?.title} — Grade {exam?.grade}</p>
+          <p style={{ color: 'var(--text-secondary)', margin: '0.25rem 0 0', fontSize: '0.9rem' }}>{exam?.title} — {getGradeDisplayName(exam?.grade)}</p>
         </div>
         <div className="row-actions">
           <button className="btn btn-ghost" onClick={() => navigate('/teacher/exams')}>← Back to Exams</button>

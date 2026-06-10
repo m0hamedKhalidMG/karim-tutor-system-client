@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { useSendCooldown } from '../../hooks/useSendCooldown.js';
 import { egyptTimeString, egyptDateString } from '../../utils/timezone.js';
+import { getGradeDisplayName } from '../../utils/gradeDisplay.js';
 import api from '../../services/api.js';
 
 export default function AttendanceScanner() {
@@ -241,7 +242,7 @@ export default function AttendanceScanner() {
                 ) : (
                   <>⚪ {s.sessionTime} — Ended</>
                 )}
-                <span style={{ opacity: 0.7, marginLeft: '0.35rem' }}>(Grade {s.grade}{s.group ? `, ${s.group.name}` : ''})</span>
+                <span style={{ opacity: 0.7, marginLeft: '0.35rem' }}>({getGradeDisplayName(s.grade)}{s.group ? `, ${s.group.name}` : ''})</span>
               </div>
             ))
           )}
@@ -269,7 +270,7 @@ export default function AttendanceScanner() {
                 </div>
                 <div>
                   <div className="scan-name">{scanResult.student.fullName}</div>
-                  <div className="scan-grade">Grade {scanResult.student.grade}</div>
+                  <div className="scan-grade">{getGradeDisplayName(scanResult.student.grade)}</div>
                 </div>
               </div>
             )}
@@ -445,7 +446,7 @@ export default function AttendanceScanner() {
                         <strong>{r.studentId?.fullName || 'Unknown'}</strong>
                       </div>
                     </td>
-                    <td><span className="badge badge-neutral">Grade {r.studentId?.grade}</span></td>
+                    <td><span className="badge badge-neutral">{getGradeDisplayName(r.studentId?.grade)}</span></td>
                     <td>
                       <span className={`badge badge-${r.status === 'present' ? 'success' : 'danger'}`}>
                         {r.status === 'present' ? 'Present' : 'Absent'}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Badge from '../../components/ui/Badge.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import { formatMonth } from '../../utils/formatMonth.js';
+import { getGradeDisplayName } from '../../utils/gradeDisplay.js';
 import api from '../../services/api.js';
 
 export default function Students() {
@@ -154,8 +155,8 @@ export default function Students() {
                       <strong>{s.fullName}</strong>
                     </div>
                   </td>
-                  <td><span className="badge badge-neutral">Grade {s.grade}</span></td>
-                  <td>{s.groupId?.name || '-'}</td>
+                   <td><span className="badge badge-neutral">{getGradeDisplayName(s.grade)}</span></td>
+                   <td>{s.groupId?.name || '-'}</td>
                   <td>{s.phone || '-'}</td>
                   <td><code style={{ background: '#f1f5f9', padding: '0.25rem 0.5rem', borderRadius: 4, fontSize: '0.8rem' }}>{s.qrCode}</code></td>
                   <td>

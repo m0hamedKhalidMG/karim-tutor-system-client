@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
 import { useNavigate } from 'react-router-dom';
+import { getGradeDisplayName } from '../../utils/gradeDisplay.js';
 import api from '../../services/api.js';
 
 export default function Dashboard() {
@@ -156,16 +157,17 @@ export default function Dashboard() {
                   {absentToday.map((s, i) => (
                     <tr key={i} onClick={() => navigate(`/teacher/students/${s._id}`)} className="clickable">
                       <td><strong>{s.name}</strong></td>
-                      <td><span className="badge badge-neutral">Grade {s.grade}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-        
-        <div className="card">
+                       <td><span className="badge badge-neutral">{getGradeDisplayName(s.grade)}</span></td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+           )}
+         </div>
+       </div>
+
+       <div className="card">
           <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>Unpaid Fees This Month</h3>
           {unpaidStudents.length === 0 ? (
             <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>All payments are up to date 🎉</p>
@@ -179,8 +181,8 @@ export default function Dashboard() {
                   {unpaidStudents.map((s, i) => (
                     <tr key={i}>
                       <td><strong>{s.name}</strong></td>
-                      <td><span className="badge badge-neutral">Grade {s.grade}</span></td>
-                      <td><span className="badge badge-warning">{s.month}</span></td>
+                       <td><span className="badge badge-neutral">{getGradeDisplayName(s.grade)}</span></td>
+                       <td><span className="badge badge-warning">{s.month}</span></td>
                     </tr>
                   ))}
                 </tbody>

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Modal from '../../components/ui/Modal.jsx';
 import { formatMonth } from '../../utils/formatMonth.js';
+import { getGradeDisplayName } from '../../utils/gradeDisplay.js';
 import { useToast } from '../../components/ui/Toast.jsx';
 import api from '../../services/api.js';
 
@@ -313,10 +314,10 @@ export default function Payments() {
                           <strong>{student.fullName || 'Unknown'}</strong>
                         </div>
                       </td>
-                      <td><span className="badge badge-neutral">Grade {student.grade}</span></td>
-                      <td>
-                        <input
-                          type="number"
+                       <td><span className="badge badge-neutral">{getGradeDisplayName(student.grade)}</span></td>
+                       <td>
+                         <input
+                           type="number"
                           value={editedAmounts[p._id] ?? (p.amount || 0)}
                           onChange={e => {
                             setEditedAmounts(prev => ({ ...prev, [p._id]: e.target.value }));

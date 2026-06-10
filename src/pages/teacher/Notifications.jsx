@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { useSendCooldown } from '../../hooks/useSendCooldown.js';
+import { getGradeDisplayName } from '../../utils/gradeDisplay.js';
 import api from '../../services/api.js';
 
 const TABS = [
@@ -16,7 +17,7 @@ const VIEW_MODES = [
   { id: 'month', label: 'Month', input: 'month' }
 ];
 
-const gradeMap = { '7': 'الأول الإعدادي', '8': 'الثاني الإعدادي', '9': 'الثالث الإعدادي' };
+
 
 function getInputValue(mode) {
   const now = new Date();
@@ -364,7 +365,7 @@ export default function Notifications() {
                               <strong>{r.student.fullName}</strong>
                             </div>
                           </td>
-                          <td><span className="badge badge-neutral">Grade {r.student.grade}</span></td>
+                          <td><span className="badge badge-neutral">{getGradeDisplayName(r.student.grade)}</span></td>
                           <td><span className="badge badge-neutral">{r.student.groupId?.name || '—'}</span></td>
                           <td>
                             {hasPhone ? (
@@ -506,7 +507,7 @@ export default function Notifications() {
                               <strong>{r.student.fullName}</strong>
                             </div>
                           </td>
-                          <td><span className="badge badge-neutral">Grade {r.student.grade}</span></td>
+                          <td><span className="badge badge-neutral">{getGradeDisplayName(r.student.grade)}</span></td>
                           <td><span className="badge badge-neutral">{r.student.groupId?.name || '—'}</span></td>
                           <td>
                             {hasPhone ? (
@@ -638,7 +639,7 @@ export default function Notifications() {
                     {logs.map(l => (
                       <tr key={l._id}>
                         <td><strong>{l.studentId?.fullName || 'Unknown'}</strong></td>
-                        <td><span className="badge badge-neutral">Grade {l.studentId?.grade}</span></td>
+                        <td><span className="badge badge-neutral">{getGradeDisplayName(l.studentId?.grade)}</span></td>
                         <td style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{l.parentPhone}</td>
                         <td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', direction: 'rtl', fontFamily: "'Cairo', sans-serif" }} title={l.message}>{l.message}</td>
                         <td><span className="badge badge-info">{l.trigger}</span></td>

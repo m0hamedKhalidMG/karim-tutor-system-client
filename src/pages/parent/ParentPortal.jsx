@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { egyptDateString } from '../../utils/timezone.js';
+import { getGradeDisplayName } from '../../utils/gradeDisplay.js';
 import api from '../../services/api.js';
 
 const COLORS = { present: '#10b981', absent: '#ef4444', notMarked: '#e5e7eb' };
@@ -137,7 +138,7 @@ export default function ParentPortal() {
             <div>
               <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>{student.fullName}</h1>
               <p style={{ margin: '0.25rem 0 0', fontSize: '1rem', color: '#dbeafe', fontWeight: 500 }}>
-                الصف {student.grade} {student.groupId?.name ? `• ${student.groupId.name}` : ''}
+                الصف {getGradeDisplayName(student.grade)} {student.groupId?.name ? `• ${student.groupId.name}` : ''}
               </p>
             </div>
           </div>
