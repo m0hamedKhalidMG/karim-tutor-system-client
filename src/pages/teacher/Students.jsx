@@ -93,10 +93,13 @@ export default function Students() {
     fetchStudents();
   };
 
+  const selectedGradeObj = gradesList.find(g => g.name === form.grade);
   const availableGroups = groups.filter(g => {
-    const groupGrade = String(g.grade || '').replace(/^Grade\s*/, '');
+    const groupGrade = String(g.grade?.name || g.grade || '').replace(/^Grade\s*/, '');
+    const groupGradeId = String(g.grade?._id || g.grade || '');
     const selectedGrade = String(form.grade || '').replace(/^Grade\s*/, '');
-    return groupGrade === selectedGrade;
+    const selectedGradeId = String(selectedGradeObj?._id || '');
+    return groupGrade === selectedGrade || groupGradeId === selectedGradeId;
   });
 
   return (
